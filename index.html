@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#075E54">
+<title>RecapVire — Suivi des virements de salaires</title>
+<!-- Lien vers le manifest PWA avec chemin relatif -->
+<link rel="manifest" href="manifest.json">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+  :root{
+    --wa-dark:#075E54;
+    --wa-teal:#128C7E;
+    --wa-green:#25D366;
+    --wa-light-green:#DCF8C6;
+    --wa-bg:#ECE5DD;
+    --wa-panel:#FFFFFF;
+    --wa-blue-tick:#34B7F1;
+    --wa-red:#DC3545;
+    --wa-gray:#667781;
+  }
+  *{-webkit-tap-highlight-color:transparent;}
+  body{
+    background:var(--wa-bg);
+    background-image:
+      radial-gradient(circle at 10% 10%, rgba(0,0,0,0.02) 0, transparent 40%),
+      radial-gradient(circle at 90% 30%, rgba(0,0,0,0.02) 0, transparent 40%),
+      radial-gradient(circle at 30% 80%, rgba(0,0,0,0.02) 0, transparent 40%);
+    min-height:100vh;
+    font-family:"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color:#111b21;
+    padding-bottom:100px;
+  }
+  .app-header{
+    background:var(--wa-dark);
+    color:#fff;
+    padding:14px 16px;
+    position:sticky;
+    top:0;
+    z-index:1000;
+    box-shadow:0 2px 6px rgba(0,0,0,0.25);
+  }
+  .app-header .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .app-header .brand > div {
+    flex: 1;
+    text-align: center;
+  }
+  .app-header .brand-icon{
+    width:42px;height:42px;
+    border-radius:50%;
+    background:var(--wa-green);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.3rem;
+    color:#fff;
+    flex-shrink:0;
+  }
+  .app-header h1{
+    font-size:1.5rem;
+    font-weight:700;
+    margin:0;
+    line-height:1.2;
+  }
+  .app-header small{
+    color:#d6f3ec;
+    font-size:0.75rem;
+  }
+  .app-header .header-sub{
+    font-size:0.7rem;
+    opacity:0.85;
+    margin-top:2px;
+    font-weight:400;
+    letter-spacing:0.3px;
+    border-top:1px solid rgba(255,255,255,0.15);
+    padding-top:4px;
+  }
+  .app-header .connection-status{
+    font-size:0.7rem;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    background:rgba(255,255,255,0.15);
+    padding:2px 10px;
+    border-radius:20px;
+    margin-top:4px;
+  }
+  .app-header .connection-status .dot{
+    display:inline-block;
+    width:8px;height:8px;
+    border-radius:50%;
+    background:#25D366;
+  }
+  .app-header .connection-status.offline .dot{
+    background:#ff4444;
+  }
+  .app-header .connection-status .online-count {
+    margin-left: 8px;
+    border-left: 1px solid rgba(255,255,255,0.2);
+    padding-left: 8px;
+  }
+  .container-app{
+    max-width:640px;
+    margin:0 auto;
+    padding:14px 12px 0 12px;
+  }
+  .month-bar{
+    background:var(--wa-panel);
+    border-radius:14px;
+    padding:12px 14px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.12);
+    margin-bottom:14px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .month-bar .top-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .month-bar .options-row{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .month-bar .options-row select,
+  .month-bar .options-row input{
+    flex:1 1 auto;
+    min-width:120px;
+  }
+  .month-bar .options-row .designation-wrap{
+    flex:1 1 auto;
+    min-width:130px;
+  }
+  .month-bar label{
+    font-weight:600;
+    color:var(--wa-teal);
+    font-size:0.85rem;
+    margin-bottom:0;
+  }
+  .month-bar input[type="month"]{
+    border:1px solid #d1d7db;
+    border-radius:8px;
+    padding:6px 10px;
+  }
+  .stat-pill{
+    font-size:0.75rem;
+    font-weight:600;
+    padding:4px 10px;
+    border-radius:20px;
+  }
+  .stat-pill.ok{background:var(--wa-light-green);color:#075E54;}
+  .stat-pill.pending{background:#ffe1e1;color:#b02a37;}
+
+  .bank-card{
+    background:var(--wa-panel);
+    border-radius:12px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.10);
+    margin-bottom:8px;
+    padding:10px 12px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    transition:background .15s ease;
+  }
+  .bank-card.checked{
+    background:var(--wa-light-green);
+  }
+  .bank-card .form-check-input{
+    width:1.35em;height:1.35em;
+    margin-top:0;
+    flex-shrink:0;
+  }
+  .bank-card .form-check-input:checked{
+    background-color:var(--wa-green);
+    border-color:var(--wa-green);
+  }
+  .bank-name{
+    font-weight:600;
+    font-size:0.98rem;
+    flex-grow:1;
+    color:#111b21;
+  }
+  .bank-status-icon{
+    font-size:1.05rem;
+  }
+  .bank-status-icon.ok{color:var(--wa-green);}
+  .bank-status-icon.pending{color:var(--wa-red);}
+  .bank-date-input{
+    border:1px solid #d1d7db;
+    border-radius:8px;
+    padding:3px 6px;
+    font-size:0.78rem;
+    width:132px;
+  }
+  .bank-date-input:disabled{
+    background:#f0f2f2;
+    color:#8696a0;
+  }
+  .remove-bank-btn{
+    background:none;
+    border:none;
+    color:#c94b4b;
+    font-size:1.05rem;
+    padding:2px 4px;
+    line-height:1;
+    opacity:0.65;
+  }
+  .remove-bank-btn:hover{opacity:1;}
+
+  .section-title{
+    font-size:0.8rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--wa-gray);
+    font-weight:700;
+    margin:18px 0 8px 4px;
+  }
+
+  .add-bank-card{
+    background:var(--wa-panel);
+    border-radius:12px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.10);
+    padding:12px;
+    display:flex;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .add-bank-card input{
+    border:1px solid #d1d7db;
+    border-radius:8px;
+  }
+  .btn-wa-green{
+    background:var(--wa-green);
+    border-color:var(--wa-green);
+    color:#fff;
+    font-weight:600;
+  }
+  .btn-wa-green:hover{background:#1fbd5a;border-color:#1fbd5a;color:#fff;}
+  .btn-wa-teal{
+    background:var(--wa-teal);
+    border-color:var(--wa-teal);
+    color:#fff;
+  }
+  .btn-wa-teal:hover{background:#0e7368;border-color:#0e7368;color:#fff;}
+
+  .fab-whatsapp{
+    position:fixed;
+    left:0;right:0;
+    bottom:0;
+    z-index:1000;
+    background:linear-gradient(0deg, var(--wa-bg) 60%, transparent);
+    padding:16px 12px 18px 12px;
+  }
+  .fab-whatsapp .btn{
+    max-width:640px;
+    margin:0 auto;
+    display:flex;
+    width:100%;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    padding:13px;
+    border-radius:14px;
+    font-size:1rem;
+    font-weight:700;
+    box-shadow:0 4px 14px rgba(7,94,84,0.35);
+  }
+
+  footer.designer{
+    max-width:640px;
+    margin:22px auto 0 auto;
+    padding:14px 16px 6px 16px;
+    text-align:center;
+    color:var(--wa-gray);
+    font-size:0.75rem;
+    border-top:1px dashed #c9d1d3;
+  }
+  footer.designer .designer-name{
+    color:var(--wa-dark);
+    font-weight:700;
+    font-size:0.82rem;
+  }
+  footer.designer .reset-row{
+    margin-top:12px;
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .empty-hint{
+    text-align:center;
+    color:var(--wa-gray);
+    font-size:0.85rem;
+    padding:20px 10px;
+  }
+
+  #toastZone{
+    position:fixed;
+    top:70px;left:0;right:0;
+    display:flex;justify-content:center;
+    z-index:2000;
+    pointer-events:none;
+  }
+  .app-toast{
+    background:#111b21;
+    color:#fff;
+    padding:8px 16px;
+    border-radius:20px;
+    font-size:0.8rem;
+    box-shadow:0 3px 10px rgba(0,0,0,0.3);
+  }
+
+  /* Bouton d'installation PWA flottant */
+  #installBtn {
+    display: none;
+    background: var(--wa-teal);
+    border-color: var(--wa-teal);
+    color: #fff;
+    border-radius: 50px;
+    padding: 10px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  #installBtn:hover {
+    background: #0e7368;
+    border-color: #0e7368;
+    color: #fff;
+    transform: scale(1.05);
+  }
+  #installFloat {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    z-index: 1050;
+  }
+
+  /* Overlay de remerciement */
+  #thankYouOverlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+  }
+  #thankYouOverlay .thank-box {
+    background: white;
+    padding: 30px 40px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    max-width: 90%;
+  }
+  #thankYouOverlay .thank-box i {
+    font-size: 3rem;
+    color: var(--wa-green);
+  }
+  #thankYouOverlay .thank-box p.title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: 10px;
+    margin-bottom: 4px;
+  }
+  #thankYouOverlay .thank-box p.sub {
+    font-size: 0.9rem;
+    color: var(--wa-gray);
+    margin-bottom: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="container-app px-0">
+    <div class="brand">
+      <div class="brand-icon"><i class="bi bi-bank2"></i></div>
+      <div>
+        <h1>RecapVire</h1>
+        <small>Suivi des virements de salaires — AME</small>
+        <div class="header-sub"><i class="bi bi-gift"></i> Don de Prof AMOUSSOU Atizoun Plateny à la communauté des enseignants du Bénin</div>
+        <div class="connection-status" id="connectionStatus">
+          <span class="dot"></span>
+          <span id="connectionLabel">Connexion...</span>
+          <span class="online-count"><i class="bi bi-people"></i> <span id="onlineCount">0</span> en ligne</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toastZone"></div>
+
+<div class="container-app">
+
+  <div class="month-bar">
+    <div class="top-row">
+      <label for="monthPicker"><i class="bi bi-calendar3"></i> Mois :</label>
+      <input type="month" id="monthPicker" class="form-control form-control-sm" style="width:auto;">
+      <span id="statOk" class="stat-pill ok">0 viré(s)</span>
+      <span id="statPending" class="stat-pill pending">0 en attente</span>
+    </div>
+    <div class="options-row">
+      <select id="statutAgents" class="form-select form-select-sm">
+        <option value="">Statut agents...</option>
+        <option value="AME">AME</option>
+      </select>
+      <select id="typePaiement" class="form-select form-select-sm">
+        <option value="">Type paiement...</option>
+        <option value="SALAIRE">SALAIRE</option>
+        <option value="PRIME">PRIME</option>
+        <option value="AUTRE">AUTRE</option>
+      </select>
+      <div class="designation-wrap" id="designationContainer" style="display:none;">
+        <input type="text" id="designationInput" class="form-control form-control-sm" placeholder="Désignation">
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Banques</div>
+  <div id="bankList"></div>
+  <div id="emptyHint" class="empty-hint d-none">Aucune banque enregistrée. Ajoutez-en une ci-dessous.</div>
+
+  <div class="section-title">Ajouter une banque</div>
+  <div class="add-bank-card">
+    <input type="text" id="newBankName" class="form-control" placeholder="Nom de la banque (ex: FinBank)">
+    <button class="btn btn-wa-teal" id="addBankBtn"><i class="bi bi-plus-lg"></i></button>
+  </div>
+
+  <footer class="designer">
+    Application conçue par<br>
+    <span class="designer-name">Atizoun Plateny AMOUSSOU</span><br>
+    <i class="bi bi-envelope"></i> atizoun@gmail.com &nbsp;•&nbsp; <i class="bi bi-telephone"></i> 01 97 74 40 35
+    <div class="reset-row">
+      <button class="btn btn-outline-danger btn-sm" id="resetBtn"><i class="bi bi-arrow-counterclockwise"></i> Réinitialiser les coches du mois</button>
+    </div>
+  </footer>
+
+</div>
+
+<div class="fab-whatsapp">
+  <button class="btn btn-wa-green" id="sendWhatsappBtn">
+    <i class="bi bi-whatsapp"></i> Envoyer le récapitulatif sur WhatsApp
+  </button>
+</div>
+
+<!-- Bouton d'installation flottant -->
+<div id="installFloat">
+  <button class="btn btn-sm" id="installBtn"><i class="bi bi-download"></i> Installer l'application</button>
+</div>
+
+<!-- Modale de sécurité -->
+<div class="modal fade" id="securityModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">🔒 Vérification de sécurité</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        <p id="securityModalMessage">Cette action est réservée à l'administrateur. Veuillez entrer le code de sécurité.</p>
+        <input type="password" id="securityCodeInput" class="form-control" placeholder="Code de sécurité" autocomplete="off">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary" id="securityModalConfirm">Confirmer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modale de confirmation pour cocher une banque -->
+<div class="modal fade" id="confirmBankModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmation de virement</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmBankMessage">La banque [Nom] a-t-elle effectivement transféré les fonds ?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="confirmBankNo" data-bs-dismiss="modal">Non</button>
+        <button type="button" class="btn btn-success" id="confirmBankYes" data-bs-dismiss="modal">Oui</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay de remerciement -->
+<div id="thankYouOverlay">
+  <div class="thank-box">
+    <i class="bi bi-check-circle-fill"></i>
+    <p class="title">Merci !</p>
+    <p class="sub">Virement confirmé avec succès.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script type="module">
+// ----- IMPORTS FIREBASE -----
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, child, update, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+
+// Nouvelle configuration Firebase (projet recapvire-ame-1d67a)
+const firebaseConfig = {
+  apiKey: "AIzaSyDWyZbe-XGPm658M9PvMgwgrnQz2OJ_bfQ",
+  authDomain: "recapvire-ame-1d67a.firebaseapp.com",
+  projectId: "recapvire-ame-1d67a",
+  storageBucket: "recapvire-ame-1d67a.firebasestorage.app",
+  messagingSenderId: "1014412009736",
+  appId: "1:1014412009736:web:176a7cb7c5ff2ac8d54cbd",
+  databaseURL: "https://recapvire-ame-1d67a-default-rtdb.europe-west1.firebasedatabase.app/"
+};
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+// ----- CONSTANTES -----
+const DEFAULT_BANKS = [
+  "BOA","ECOBANK","NSIA","POSTE","ORABANK","SGB","UBA","BSIC",
+  "BIIC Ex BIBE","CLCAM","BANQ ATLANTIQUE","BGFI","Coris Bank",
+  "CBAO","CCEI BANK","SONI BANK","AFGC"
+];
+const MOIS_FR = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+// ----- RÉFÉRENCES DOM -----
+const monthPicker = document.getElementById("monthPicker");
+const bankListEl = document.getElementById("bankList");
+const emptyHint = document.getElementById("emptyHint");
+const statOk = document.getElementById("statOk");
+const statPending = document.getElementById("statPending");
+const newBankInput = document.getElementById("newBankName");
+const addBankBtn = document.getElementById("addBankBtn");
+const sendBtn = document.getElementById("sendWhatsappBtn");
+const toastZone = document.getElementById("toastZone");
+const statutAgents = document.getElementById("statutAgents");
+const typePaiement = document.getElementById("typePaiement");
+const designationInput = document.getElementById("designationInput");
+const designationContainer = document.getElementById("designationContainer");
+const resetBtn = document.getElementById("resetBtn");
+const installBtn = document.getElementById("installBtn");
+const connectionStatus = document.getElementById("connectionStatus");
+const connectionLabel = document.getElementById("connectionLabel");
+const onlineCountSpan = document.getElementById("onlineCount");
+
+// Éléments de la modale de sécurité
+const securityModalEl = document.getElementById("securityModal");
+const securityModalMsg = document.getElementById("securityModalMessage");
+const securityCodeInput = document.getElementById("securityCodeInput");
+const securityModalConfirm = document.getElementById("securityModalConfirm");
+const securityModal = new bootstrap.Modal(securityModalEl, { backdrop: 'static' });
+
+// Éléments de la modale de confirmation
+const confirmBankModalEl = document.getElementById("confirmBankModal");
+const confirmBankMessage = document.getElementById("confirmBankMessage");
+const confirmBankYes = document.getElementById("confirmBankYes");
+const confirmBankNo = document.getElementById("confirmBankNo");
+const confirmBankModal = new bootstrap.Modal(confirmBankModalEl, { backdrop: 'static' });
+
+// Éléments overlay de remerciement
+const thankYouOverlay = document.getElementById("thankYouOverlay");
+
+// ----- ÉTAT LOCAL (synchronisé avec Firebase) -----
+let banksData = [];          // liste des banques
+let statusesData = {};       // { mois: { banque: {checked, date} } }
+let optionsData = {};        // { mois: {statutAgents, typePaiement, designation} }
+let initialLoadDone = false;
+
+// ----- FONCTIONS UTILITAIRES -----
+function showToast(msg){
+  const el = document.createElement("div");
+  el.className = "app-toast";
+  el.textContent = msg;
+  toastZone.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 2200);
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[s]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+function formatDateFR(iso){
+  if(!iso) return "";
+  const parts = iso.split("-");
+  if(parts.length !== 3) return iso;
+  return parts[2] + "/" + parts[1] + "/" + parts[0];
+}
+
+function todayISO(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+function currentMonthValue(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+}
+
+// ----- FONCTIONS FIREBASE (accès asynchrone) -----
+async function readBanks() {
+  const snap = await get(ref(database, 'banks'));
+  if (snap.exists()) {
+    const val = snap.val();
+    return Array.isArray(val) ? val : DEFAULT_BANKS.slice();
+  } else {
+    // Pas de données : initialiser avec DEFAULT_BANKS
+    await set(ref(database, 'banks'), DEFAULT_BANKS);
+    return DEFAULT_BANKS.slice();
+  }
+}
+
+async function writeBanks(banks) {
+  await set(ref(database, 'banks'), banks);
+}
+
+async function readStatus(month) {
+  const snap = await get(child(ref(database), `statuses/${month}`));
+  if (snap.exists()) return snap.val();
+  return {};
+}
+
+async function writeStatus(month, status) {
+  await set(ref(database, `statuses/${month}`), status);
+}
+
+async function readOptions(month) {
+  const snap = await get(child(ref(database), `options/${month}`));
+  if (snap.exists()) return snap.val();
+  return { statutAgents: "", typePaiement: "", designation: "" };
+}
+
+async function writeOptions(month, options) {
+  await set(ref(database, `options/${month}`), options);
+}
+
+// ----- LISTENERS EN TEMPS RÉEL -----
+function setupListeners() {
+  // Écoute des banques
+  onValue(ref(database, 'banks'), (snapshot) => {
+    if (snapshot.exists()) {
+      const val = snapshot.val();
+      banksData = Array.isArray(val) ? val : DEFAULT_BANKS.slice();
+    } else {
+      // Si supprimé, on remet les défauts
+      banksData = DEFAULT_BANKS.slice();
+      writeBanks(banksData); // recréer
+    }
+    if (initialLoadDone) render();
+  });
+
+  // Écoute des statuses
+  onValue(ref(database, 'statuses'), (snapshot) => {
+    if (snapshot.exists()) {
+      statusesData = snapshot.val();
+    } else {
+      statusesData = {};
+    }
+    if (initialLoadDone) render();
+  });
+
+  // Écoute des options
+  onValue(ref(database, 'options'), (snapshot) => {
+    if (snapshot.exists()) {
+      optionsData = snapshot.val();
+    } else {
+      optionsData = {};
+    }
+    if (initialLoadDone) render();
+  });
+
+  // Écoute de l'état de connexion
+  const connectedRef = ref(database, '.info/connected');
+  onValue(connectedRef, (snap) => {
+    const connected = snap.val();
+    if (connected) {
+      connectionStatus.classList.remove('offline');
+      connectionLabel.textContent = 'En ligne';
+    } else {
+      connectionStatus.classList.add('offline');
+      connectionLabel.textContent = 'Hors ligne';
+    }
+  });
+}
+
+// ----- GESTION DE LA PRÉSENCE (utilisateurs en ligne) -----
+function setupPresence() {
+  // Générer un ID unique pour cette session
+  const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  const presenceRef = ref(database, 'presence/' + userId);
+
+  // Marquer la présence
+  set(presenceRef, true);
+
+  // Supprimer automatiquement lors de la déconnexion
+  onDisconnect(presenceRef).remove();
+
+  // Écouter les changements sur le nœud presence pour mettre à jour le compteur
+  const presenceListRef = ref(database, 'presence');
+  onValue(presenceListRef, (snapshot) => {
+    const count = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+    onlineCountSpan.textContent = count;
+  });
+}
+
+// ----- RENDU PRINCIPAL -----
+function render(){
+  const monthValue = monthPicker.value || currentMonthValue();
+  const banks = banksData.slice();
+  const status = statusesData[monthValue] || {};
+  const options = optionsData[monthValue] || { statutAgents: "", typePaiement: "", designation: "" };
+
+  // Appliquer les options sauvegardées
+  statutAgents.value = options.statutAgents || "";
+  typePaiement.value = options.typePaiement || "";
+  designationInput.value = options.designation || "";
+  const showDesignation = (typePaiement.value === "PRIME" || typePaiement.value === "AUTRE");
+  designationContainer.style.display = showDesignation ? "block" : "none";
+
+  // Mettre à jour les data-prev-value pour la sécurité (valeurs précédentes)
+  statutAgents.dataset.prevValue = statutAgents.value;
+  typePaiement.dataset.prevValue = typePaiement.value;
+  designationInput.dataset.prevValue = designationInput.value;
+
+  bankListEl.innerHTML = "";
+
+  if(banks.length === 0){
+    emptyHint.classList.remove("d-none");
+  } else {
+    emptyHint.classList.add("d-none");
+  }
+
+  let okCount = 0, pendingCount = 0;
+
+  banks.forEach((bank, idx) => {
+    const entry = status[bank] || { checked:false, date:"" };
+    if(entry.checked) okCount++; else pendingCount++;
+
+    const card = document.createElement("div");
+    card.className = "bank-card" + (entry.checked ? " checked" : "");
+
+    card.innerHTML = `
+      <input class="form-check-input bank-checkbox" type="checkbox" data-bank="${escapeAttr(bank)}" ${entry.checked ? "checked" : ""}>
+      <span class="bank-status-icon ${entry.checked ? "ok" : "pending"}">
+        <i class="bi ${entry.checked ? "bi-check-circle-fill" : "bi-x-circle-fill"}"></i>
+      </span>
+      <span class="bank-name">${escapeHtml(bank)}</span>
+      <input type="date" class="bank-date-input" data-bank="${escapeAttr(bank)}" value="${entry.date || ""}" ${entry.checked ? "" : "disabled"}>
+      <button class="remove-bank-btn" data-bank="${escapeAttr(bank)}" title="Supprimer"><i class="bi bi-trash3"></i></button>
+    `;
+    bankListEl.appendChild(card);
+  });
+
+  statOk.textContent = okCount + " viré(s)";
+  statPending.textContent = pendingCount + " en attente";
+
+  // Attacher les événements
+  bankListEl.querySelectorAll(".bank-checkbox").forEach(cb => {
+    cb.addEventListener("change", onCheckboxChange);
+  });
+  bankListEl.querySelectorAll(".bank-date-input").forEach(dt => {
+    dt.addEventListener("change", onDateChange);
+  });
+  bankListEl.querySelectorAll(".remove-bank-btn").forEach(btn => {
+    btn.addEventListener("click", onRemoveBank);
+  });
+}
+
+// ----- GESTION DE LA SÉCURITÉ (modale) -----
+function askSecurityCode(message) {
+  return new Promise((resolve) => {
+    securityModalMsg.textContent = message || "Cette action est réservée à l'administrateur. Veuillez entrer le code de sécurité.";
+    securityCodeInput.value = "";
+    securityModalEl.addEventListener('shown.bs.modal', function onShown() {
+      securityCodeInput.focus();
+      securityModalEl.removeEventListener('shown.bs.modal', onShown);
+    });
+    const confirmHandler = function() {
+      const code = securityCodeInput.value.trim();
+      securityModalConfirm.removeEventListener('click', confirmHandler);
+      securityModalEl.removeEventListener('hidden.bs.modal', hiddenHandler);
+      securityModal.hide();
+      resolve(code || null);
+    };
+    const hiddenHandler = function() {
+      securityModalConfirm.removeEventListener('click', confirmHandler);
+      securityModalEl.removeEventListener('hidden.bs.modal', hiddenHandler);
+      resolve(null);
+    };
+    securityModalConfirm.addEventListener('click', confirmHandler);
+    securityModalEl.addEventListener('hidden.bs.modal', hiddenHandler);
+    securityModal.show();
+  });
+}
+
+// ----- MODALE DE CONFIRMATION POUR COCHER -----
+function askConfirmation(bankName) {
+  return new Promise((resolve) => {
+    confirmBankMessage.textContent = `La banque « ${bankName} » a-t-elle effectivement transféré les fonds ?`;
+    let resolved = false;
+    const yesHandler = function() {
+      if (!resolved) { resolved = true; resolve(true); }
+      confirmBankYes.removeEventListener('click', yesHandler);
+      confirmBankNo.removeEventListener('click', noHandler);
+      confirmBankModalEl.removeEventListener('hidden.bs.modal', hiddenHandler);
+    };
+    const noHandler = function() {
+      if (!resolved) { resolved = true; resolve(false); }
+      confirmBankYes.removeEventListener('click', yesHandler);
+      confirmBankNo.removeEventListener('click', noHandler);
+      confirmBankModalEl.removeEventListener('hidden.bs.modal', hiddenHandler);
+    };
+    const hiddenHandler = function() {
+      if (!resolved) { resolved = true; resolve(false); }
+      confirmBankYes.removeEventListener('click', yesHandler);
+      confirmBankNo.removeEventListener('click', noHandler);
+      confirmBankModalEl.removeEventListener('hidden.bs.modal', hiddenHandler);
+    };
+    confirmBankYes.addEventListener('click', yesHandler);
+    confirmBankNo.addEventListener('click', noHandler);
+    confirmBankModalEl.addEventListener('hidden.bs.modal', hiddenHandler);
+    confirmBankModal.show();
+  });
+}
+
+// ----- OVERLAY DE REMERCIEMENT -----
+function showThankYouOverlay() {
+  thankYouOverlay.style.display = 'flex';
+  setTimeout(() => {
+    thankYouOverlay.style.display = 'none';
+  }, 1500);
+}
+
+// ----- ÉVÉNEMENTS SUR LES BANQUES (asynchrones avec Firebase) -----
+async function onCheckboxChange(e){
+  e.preventDefault(); // on garde le contrôle du checked
+  const monthValue = monthPicker.value || currentMonthValue();
+  // Vérifier que les options sont valides
+  if(!areOptionsValid()){
+    showToast("Veuillez sélectionner le statut agents et le type de paiement (et désignation si requis)");
+    // on remet la case à son état initial (non cochée)
+    e.target.checked = false;
+    return;
+  }
+
+  const bank = e.target.getAttribute("data-bank");
+  const nowChecked = e.target.checked; // true si on veut cocher, false si on veut décocher
+
+  if (!nowChecked) {
+    // Décochage : demande du code de sécurité
+    const code = await askSecurityCode("⚠️ Action réservée à l'administrateur. Entrez le code de sécurité pour décochage.");
+    if (code === "1984") {
+      // Procéder au décochage
+      let status = statusesData[monthValue] || {};
+      status[bank] = { checked: false, date: "" };
+      await writeStatus(monthValue, status);
+      statusesData[monthValue] = status;
+      render();
+    } else {
+      // Annulation : on remet la case cochée (car elle était cochée avant le clic)
+      e.target.checked = true;
+      showToast("Code incorrect ou action annulée. Décochage non effectué.");
+    }
+  } else {
+    // Coche : demander confirmation à l'utilisateur
+    const confirmation = await askConfirmation(bank);
+    if (confirmation) {
+      // Oui : mettre à jour, afficher remerciement, cocher
+      let status = statusesData[monthValue] || {};
+      const existingDate = (status[bank] && status[bank].date) || todayISO();
+      status[bank] = { checked: true, date: existingDate };
+      await writeStatus(monthValue, status);
+      statusesData[monthValue] = status;
+      showThankYouOverlay();
+      render();
+    } else {
+      // Non : ne rien faire, la case reste décochée
+      e.target.checked = false;
+      // Pas de toast, juste annulation silencieuse
+    }
+  }
+}
+
+function onDateChange(e){
+  const bank = e.target.getAttribute("data-bank");
+  const monthValue = monthPicker.value || currentMonthValue();
+  let status = statusesData[monthValue] || {};
+  if(!status[bank]) status[bank] = { checked:true, date:"" };
+  status[bank].date = e.target.value;
+  writeStatus(monthValue, status);
+  statusesData[monthValue] = status;
+  // Pas besoin de rerender, l'input a déjà la valeur
+}
+
+async function onRemoveBank(e){
+  const btn = e.target.closest(".remove-bank-btn");
+  const bank = btn.getAttribute("data-bank");
+  const code = await askSecurityCode(`⚠️ Suppression de la banque "${bank}". Cette action est réservée à l'administrateur. Entrez le code de sécurité.`);
+  if (code === "1984") {
+    if (!confirm(`Supprimer définitivement la banque "${bank}" de la liste ?`)) return;
+    let banks = banksData.filter(b => b !== bank);
+    await writeBanks(banks);
+    // Le listener mettra à jour banksData et render
+  } else {
+    showToast("Code incorrect ou action annulée. Suppression annulée.");
+  }
+}
+
+// ----- GESTION DES OPTIONS (statut, type, désignation) avec sécurité -----
+function areOptionsValid(){
+  const statut = statutAgents.value;
+  const type = typePaiement.value;
+  if(!statut || !type) return false;
+  if((type === "PRIME" || type === "AUTRE") && !designationInput.value.trim()){
+    return false;
+  }
+  return true;
+}
+
+async function handleOptionChange(e) {
+  const element = e.target;
+  if (element.disabled) return;
+  const previousValue = element.dataset.prevValue || '';
+  const newValue = element.value;
+  if (previousValue === newValue) return;
+
+  const code = await askSecurityCode("⚠️ Modification des paramètres. Cette action est réservée à l'administrateur. Entrez le code de sécurité.");
+  if (code === "1984") {
+    element.dataset.prevValue = newValue;
+    // Sauvegarder les options
+    const monthValue = monthPicker.value || currentMonthValue();
+    let options = optionsData[monthValue] || {};
+    options.statutAgents = statutAgents.value;
+    options.typePaiement = typePaiement.value;
+    options.designation = designationInput.value.trim();
+    await writeOptions(monthValue, options);
+    optionsData[monthValue] = options;
+    // Gérer affichage désignation
+    if (element.id === 'typePaiement') {
+      const show = (newValue === "PRIME" || newValue === "AUTRE");
+      designationContainer.style.display = show ? "block" : "none";
+      if (!show) {
+        designationInput.value = "";
+        designationInput.dataset.prevValue = "";
+        // Mettre à jour les options après avoir vidé
+        options.designation = "";
+        await writeOptions(monthValue, options);
+        optionsData[monthValue] = options;
+      }
+    }
+    showToast("Modification enregistrée.");
+  } else {
+    element.value = previousValue;
+    showToast("Code incorrect ou action annulée. Modification annulée.");
+  }
+}
+
+// ----- AUTRES ÉVÉNEMENTS (ajout banque, reset, envoi) -----
+addBankBtn.addEventListener("click", async () => {
+  const name = newBankInput.value.trim();
+  if(!name){
+    newBankInput.focus();
+    return;
+  }
+  if(banksData.some(b => b.toLowerCase() === name.toLowerCase())){
+    showToast("Cette banque existe déjà");
+    return;
+  }
+  const newBanks = [...banksData, name];
+  await writeBanks(newBanks);
+  // Le listener mettra à jour
+  newBankInput.value = "";
+  showToast(`"${name}" ajoutée`);
+});
+
+newBankInput.addEventListener("keydown", (e) => {
+  if(e.key === "Enter"){
+    e.preventDefault();
+    addBankBtn.click();
+  }
+});
+
+monthPicker.addEventListener("change", function(){
+  render(); // les données sont déjà dans les variables globales
+});
+
+resetBtn.addEventListener("click", async function(){
+  const monthValue = monthPicker.value || currentMonthValue();
+  const code = await askSecurityCode("⚠️ Réinitialisation de toutes les coches du mois. Cette action est réservée à l'administrateur. Entrez le code de sécurité.");
+  if (code === "1984") {
+    if (!confirm(`Voulez-vous vraiment effacer toutes les coches pour le mois ${monthValue} ?`)) return;
+    // Supprimer le statut du mois
+    await remove(ref(database, `statuses/${monthValue}`));
+    // Mettre à jour local
+    delete statusesData[monthValue];
+    showToast("Historique des coches réinitialisé pour ce mois");
+    render();
+  } else {
+    showToast("Code incorrect ou action annulée. Réinitialisation annulée.");
+  }
+});
+
+sendBtn.addEventListener("click", () => {
+  const monthValue = monthPicker.value || currentMonthValue();
+  const [year, month] = monthValue.split("-");
+  const moisNom = MOIS_FR[parseInt(month,10)-1];
+  const banks = banksData;
+  const status = statusesData[monthValue] || {};
+  const options = optionsData[monthValue] || {};
+
+  let virees = [];
+  let enCours = [];
+
+  banks.forEach(bank => {
+    const entry = status[bank] || { checked:false, date:"" };
+    if(entry.checked){
+      virees.push(`🟢 *${bank}* — viré le ${formatDateFR(entry.date) || "date non précisée"}`);
+    } else {
+      enCours.push(`⏳ *${bank}* — en cours`);
+    }
+  });
+
+  let titre = `*RÉCAPITULATIF DU VIREMENT`;
+  const type = options.typePaiement || "";
+  if (type === "SALAIRE") titre += ` DES SALAIRES`;
+  else if (type === "PRIME") titre += ` DES PRIMES`;
+  else if (type === "AUTRE") titre += ` DES PAIEMENTS AUTRES`;
+  else titre += ``;
+
+  titre += ` DU MOIS DE ${moisNom.toUpperCase()} ${year}`;
+  if (options.statutAgents) {
+    titre += ` POUR ${options.statutAgents.toUpperCase()}`;
+  }
+  if ((type === "PRIME" || type === "AUTRE") && options.designation) {
+    titre += ` (${options.designation})`;
+  }
+  titre += `*\n\n`;
+
+  let msg = titre;
+
+  if(virees.length){
+    msg += `*Banques ayant viré :*\n` + virees.join("\n") + "\n\n";
+  }
+  if(enCours.length){
+    msg += `*Banques n'ayant pas encore viré :*\n` + enCours.join("\n") + "\n\n";
+  }
+
+  msg += `NB : Signalez si c'est bon. Merci.\n\n`;
+
+  if (virees.length === banks.length && banks.length > 0) {
+    const typeLabel = type || "paiement";
+    const statutLabel = options.statutAgents || "";
+    const moisAvecMaj = moisNom.charAt(0).toUpperCase() + moisNom.slice(1);
+    msg += `💰 _*Toutes les banques répertoriées ont viré*_ pour le ${typeLabel.toLowerCase()} du mois de ${moisAvecMaj} ${year}${statutLabel ? ` pour ${statutLabel}` : ''}.\n`;
+    msg += `Chers collègues, faites en bon usage et rendez-vous au prochain mois.\n\n`;
+  }
+
+  msg += `_Récapitulatif généré via RecapVire_\n`;
+  msg += `Contact : atizoun@gmail.com`;
+
+  const url = "https://wa.me/?text=" + encodeURIComponent(msg);
+  window.open(url, "_blank");
+});
+
+// ----- INITIALISATION -----
+async function init() {
+  // Lire les données initiales une fois pour alimenter les variables
+  banksData = await readBanks();
+  const statusSnap = await get(ref(database, 'statuses'));
+  statusesData = statusSnap.exists() ? statusSnap.val() : {};
+  const optionsSnap = await get(ref(database, 'options'));
+  optionsData = optionsSnap.exists() ? optionsSnap.val() : {};
+
+  initialLoadDone = true;
+
+  // Mettre en place les listeners
+  setupListeners();
+
+  // Mettre en place la présence (utilisateurs en ligne)
+  setupPresence();
+
+  // Initialiser le monthPicker
+  monthPicker.value = currentMonthValue();
+
+  // Charger les options du mois courant
+  const initMonth = monthPicker.value;
+  const initOptions = optionsData[initMonth] || {};
+  statutAgents.value = initOptions.statutAgents || "";
+  typePaiement.value = initOptions.typePaiement || "";
+  designationInput.value = initOptions.designation || "";
+  const showInit = (typePaiement.value === "PRIME" || typePaiement.value === "AUTRE");
+  designationContainer.style.display = showInit ? "block" : "none";
+  statutAgents.dataset.prevValue = statutAgents.value;
+  typePaiement.dataset.prevValue = typePaiement.value;
+  designationInput.dataset.prevValue = designationInput.value;
+
+  // Ajouter les écouteurs pour les options (sécurité)
+  statutAgents.addEventListener('focus', function() { this.dataset.prevValue = this.value; });
+  typePaiement.addEventListener('focus', function() { this.dataset.prevValue = this.value; });
+  designationInput.addEventListener('focus', function() { this.dataset.prevValue = this.value; });
+  statutAgents.addEventListener('change', handleOptionChange);
+  typePaiement.addEventListener('change', handleOptionChange);
+  designationInput.addEventListener('change', handleOptionChange);
+  designationInput.addEventListener('blur', function(e) {
+    if (this.dataset.prevValue !== this.value) {
+      handleOptionChange(e);
+    }
+  });
+
+  // Premier rendu
+  render();
+
+  // Gestion PWA - Enregistrement du Service Worker avec chemin relatif (fonctionne en local et en production)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('SW enregistré avec succès'))
+      .catch(err => console.log('Erreur d\'enregistrement du SW :', err));
+  }
+
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = 'inline-block';
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const result = await deferredPrompt.userChoice;
+      if (result.outcome === 'accepted') {
+        showToast('Application installée avec succès !');
+      } else {
+        showToast('Installation annulée.');
+      }
+      deferredPrompt = null;
+      installBtn.style.display = 'none';
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    installBtn.style.display = 'none';
+  });
+}
+
+// Lancer l'initialisation
+init();
+
+</script>
+</body>
+</html>

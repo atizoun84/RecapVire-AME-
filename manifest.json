@@ -1,0 +1,22 @@
+{
+  "name": "RecapVire — Suivi des virements",
+  "short_name": "RecapVire AME",
+  "description": "Suivi des virements de salaires pour les enseignants du Bénin",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#ECE5DD",
+  "theme_color": "#075E54",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
