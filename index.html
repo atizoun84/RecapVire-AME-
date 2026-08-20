@@ -435,11 +435,7 @@
   <div id="bankList"></div>
   <div id="emptyHint" class="empty-hint d-none">Aucune banque enregistrée. Ajoutez-en une ci-dessous.</div>
 
-  <div class="section-title">Ajouter une banque</div>
-  <div class="add-bank-card">
-    <input type="text" id="newBankName" class="form-control" placeholder="Nom de la banque (ex: FinBank)">
-    <button class="btn btn-wa-teal" id="addBankBtn"><i class="bi bi-plus-lg"></i></button>
-  </div>
+  <!-- La section d'ajout de banque a été supprimée -->
 
   <footer class="designer">
     Application conçue par<br>
@@ -544,8 +540,6 @@ const bankListEl = document.getElementById("bankList");
 const emptyHint = document.getElementById("emptyHint");
 const statOk = document.getElementById("statOk");
 const statPending = document.getElementById("statPending");
-const newBankInput = document.getElementById("newBankName");
-const addBankBtn = document.getElementById("addBankBtn");
 const sendBtn = document.getElementById("sendWhatsappBtn");
 const toastZone = document.getElementById("toastZone");
 const statutAgents = document.getElementById("statutAgents");
@@ -954,30 +948,8 @@ async function handleOptionChange(e) {
   }
 }
 
-// ----- AUTRES ÉVÉNEMENTS (ajout banque, reset, envoi) -----
-addBankBtn.addEventListener("click", async () => {
-  const name = newBankInput.value.trim();
-  if(!name){
-    newBankInput.focus();
-    return;
-  }
-  if(banksData.some(b => b.toLowerCase() === name.toLowerCase())){
-    showToast("Cette banque existe déjà");
-    return;
-  }
-  const newBanks = [...banksData, name];
-  await writeBanks(newBanks);
-  // Le listener mettra à jour
-  newBankInput.value = "";
-  showToast(`"${name}" ajoutée`);
-});
-
-newBankInput.addEventListener("keydown", (e) => {
-  if(e.key === "Enter"){
-    e.preventDefault();
-    addBankBtn.click();
-  }
-});
+// ----- AUTRES ÉVÉNEMENTS (reset, envoi) -----
+// La fonction d'ajout de banque a été supprimée
 
 monthPicker.addEventListener("change", function(){
   render(); // les données sont déjà dans les variables globales
