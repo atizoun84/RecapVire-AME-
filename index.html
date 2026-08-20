@@ -762,7 +762,6 @@ function render(){
       </span>
       <span class="bank-name">${escapeHtml(bank)}</span>
       <input type="date" class="bank-date-input" data-bank="${escapeAttr(bank)}" value="${entry.date || ""}" ${entry.checked ? "" : "disabled"}>
-      <button class="remove-bank-btn" data-bank="${escapeAttr(bank)}" title="Supprimer"><i class="bi bi-trash3"></i></button>
     `;
     bankListEl.appendChild(card);
   });
@@ -777,9 +776,7 @@ function render(){
   bankListEl.querySelectorAll(".bank-date-input").forEach(dt => {
     dt.addEventListener("change", onDateChange);
   });
-  bankListEl.querySelectorAll(".remove-bank-btn").forEach(btn => {
-    btn.addEventListener("click", onRemoveBank);
-  });
+  // Le bouton de suppression a été retiré
 }
 
 // ----- GESTION DE LA SÉCURITÉ (modale) -----
@@ -906,20 +903,6 @@ function onDateChange(e){
   writeStatus(monthValue, status);
   statusesData[monthValue] = status;
   // Pas besoin de rerender, l'input a déjà la valeur
-}
-
-async function onRemoveBank(e){
-  const btn = e.target.closest(".remove-bank-btn");
-  const bank = btn.getAttribute("data-bank");
-  const code = await askSecurityCode(`⚠️ Suppression de la banque "${bank}". Cette action est réservée à l'administrateur. Entrez le code de sécurité.`);
-  if (code === "1984") {
-    if (!confirm(`Supprimer définitivement la banque "${bank}" de la liste ?`)) return;
-    let banks = banksData.filter(b => b !== bank);
-    await writeBanks(banks);
-    // Le listener mettra à jour banksData et render
-  } else {
-    showToast("Code incorrect ou action annulée. Suppression annulée.");
-  }
 }
 
 // ----- GESTION DES OPTIONS (statut, type, désignation) avec sécurité -----
