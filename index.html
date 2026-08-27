@@ -381,6 +381,40 @@
     color: var(--wa-gray);
     margin-bottom: 0;
   }
+
+  /* Mode lecture seule : masquer les cases et désactiver visuellement */
+  .readonly-mode .bank-checkbox {
+    display: none !important;
+  }
+  .readonly-mode .bank-date-input {
+    background: #f0f2f2;
+    color: #8696a0;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .readonly-mode .month-bar select,
+  .readonly-mode .month-bar input[type="month"] {
+    background: #f0f2f2;
+    color: #8696a0;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .readonly-mode .month-bar .options-row .designation-wrap input {
+    background: #f0f2f2;
+    color: #8696a0;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .readonly-mode .reset-row .btn {
+    display: none;
+  }
+  .readonly-mode .add-bank-card {
+    display: none !important;
+  }
+  .readonly-mode .bank-status-icon .bi-check-circle-fill,
+  .readonly-mode .bank-status-icon .bi-x-circle-fill {
+    opacity: 0.6;
+  }
 </style>
 </head>
 <body>
@@ -574,6 +608,7 @@ let banksData = [];          // liste des banques
 let statusesData = {};       // { mois: { banque: {checked, date} } }
 let optionsData = {};        // { mois: {statutAgents, typePaiement, designation} }
 let initialLoadDone = false;
+let isAdmin = false;         // mode administrateur (false = lecture seule)
 
 // ----- FONCTIONS UTILITAIRES -----
 function showToast(msg){
@@ -614,7 +649,6 @@ async function readBanks() {
     const val = snap.val();
     return Array.isArray(val) ? val : DEFAULT_BANKS.slice();
   } else {
-    // Pas de données : initialiser avec DEFAULT_BANKS
     await set(ref(database, 'banks'), DEFAULT_BANKS);
     return DEFAULT_BANKS.slice();
   }
@@ -646,20 +680,17 @@ async function writeOptions(month, options) {
 
 // ----- LISTENERS EN TEMPS RÉEL -----
 function setupListeners() {
-  // Écoute des banques
   onValue(ref(database, 'banks'), (snapshot) => {
     if (snapshot.exists()) {
       const val = snapshot.val();
       banksData = Array.isArray(val) ? val : DEFAULT_BANKS.slice();
     } else {
-      // Si supprimé, on remet les défauts
       banksData = DEFAULT_BANKS.slice();
-      writeBanks(banksData); // recréer
+      writeBanks(banksData);
     }
     if (initialLoadDone) render();
   });
 
-  // Écoute des statuses
   onValue(ref(database, 'statuses'), (snapshot) => {
     if (snapshot.exists()) {
       statusesData = snapshot.val();
@@ -669,7 +700,6 @@ function setupListeners() {
     if (initialLoadDone) render();
   });
 
-  // Écoute des options
   onValue(ref(database, 'options'), (snapshot) => {
     if (snapshot.exists()) {
       optionsData = snapshot.val();
@@ -679,7 +709,6 @@ function setupListeners() {
     if (initialLoadDone) render();
   });
 
-  // Écoute de l'état de connexion
   const connectedRef = ref(database, '.info/connected');
   onValue(connectedRef, (snap) => {
     const connected = snap.val();
@@ -693,24 +722,41 @@ function setupListeners() {
   });
 }
 
-// ----- GESTION DE LA PRÉSENCE (utilisateurs en ligne) -----
+// ----- GESTION DE LA PRÉSENCE -----
 function setupPresence() {
-  // Générer un ID unique pour cette session
   const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   const presenceRef = ref(database, 'presence/' + userId);
-
-  // Marquer la présence
   set(presenceRef, true);
-
-  // Supprimer automatiquement lors de la déconnexion
   onDisconnect(presenceRef).remove();
-
-  // Écouter les changements sur le nœud presence pour mettre à jour le compteur
   const presenceListRef = ref(database, 'presence');
   onValue(presenceListRef, (snapshot) => {
     const count = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
     onlineCountSpan.textContent = count;
   });
+}
+
+// ----- APPLICATION DU MODE (lecture seule / admin) -----
+function applyMode() {
+  const container = document.querySelector('.container-app');
+  if (!isAdmin) {
+    container.classList.add('readonly-mode');
+    // Désactiver les éléments interactifs
+    monthPicker.disabled = true;
+    statutAgents.disabled = true;
+    typePaiement.disabled = true;
+    designationInput.disabled = true;
+    resetBtn.style.display = 'none';
+    // Le bouton d'ajout n'existe plus, mais on cache le conteneur s'il était présent
+    const addCard = document.querySelector('.add-bank-card');
+    if (addCard) addCard.style.display = 'none';
+  } else {
+    container.classList.remove('readonly-mode');
+    monthPicker.disabled = false;
+    statutAgents.disabled = false;
+    typePaiement.disabled = false;
+    designationInput.disabled = false;
+    resetBtn.style.display = '';
+  }
 }
 
 // ----- RENDU PRINCIPAL -----
@@ -720,17 +766,24 @@ function render(){
   const status = statusesData[monthValue] || {};
   const options = optionsData[monthValue] || { statutAgents: "", typePaiement: "", designation: "" };
 
-  // Appliquer les options sauvegardées
-  statutAgents.value = options.statutAgents || "";
-  typePaiement.value = options.typePaiement || "";
-  designationInput.value = options.designation || "";
-  const showDesignation = (typePaiement.value === "PRIME" || typePaiement.value === "AUTRE");
-  designationContainer.style.display = showDesignation ? "block" : "none";
-
-  // Mettre à jour les data-prev-value pour la sécurité (valeurs précédentes)
-  statutAgents.dataset.prevValue = statutAgents.value;
-  typePaiement.dataset.prevValue = typePaiement.value;
-  designationInput.dataset.prevValue = designationInput.value;
+  if (isAdmin) {
+    // Mettre à jour les champs avec les options sauvegardées (seulement en mode admin)
+    statutAgents.value = options.statutAgents || "";
+    typePaiement.value = options.typePaiement || "";
+    designationInput.value = options.designation || "";
+    const showDesignation = (typePaiement.value === "PRIME" || typePaiement.value === "AUTRE");
+    designationContainer.style.display = showDesignation ? "block" : "none";
+    statutAgents.dataset.prevValue = statutAgents.value;
+    typePaiement.dataset.prevValue = typePaiement.value;
+    designationInput.dataset.prevValue = designationInput.value;
+  } else {
+    // En lecture seule, on affiche les options mais on ne peut pas les modifier
+    statutAgents.value = options.statutAgents || "";
+    typePaiement.value = options.typePaiement || "";
+    designationInput.value = options.designation || "";
+    const showDesignation = (typePaiement.value === "PRIME" || typePaiement.value === "AUTRE");
+    designationContainer.style.display = showDesignation ? "block" : "none";
+  }
 
   bankListEl.innerHTML = "";
 
@@ -749,8 +802,12 @@ function render(){
     const card = document.createElement("div");
     card.className = "bank-card" + (entry.checked ? " checked" : "");
 
+    // En mode admin, on affiche la case à cocher ; en lecture seule, on la masque via CSS (readonly-mode .bank-checkbox)
+    // On ajoute la classe 'bank-checkbox' pour le ciblage CSS
+    const checkboxHtml = `<input class="form-check-input bank-checkbox" type="checkbox" data-bank="${escapeAttr(bank)}" ${entry.checked ? "checked" : ""}>`;
+
     card.innerHTML = `
-      <input class="form-check-input bank-checkbox" type="checkbox" data-bank="${escapeAttr(bank)}" ${entry.checked ? "checked" : ""}>
+      ${checkboxHtml}
       <span class="bank-status-icon ${entry.checked ? "ok" : "pending"}">
         <i class="bi ${entry.checked ? "bi-check-circle-fill" : "bi-x-circle-fill"}"></i>
       </span>
@@ -763,19 +820,31 @@ function render(){
   statOk.textContent = okCount + " viré(s)";
   statPending.textContent = pendingCount + " en attente";
 
-  // Attacher les événements
-  bankListEl.querySelectorAll(".bank-checkbox").forEach(cb => {
-    cb.addEventListener("change", onCheckboxChange);
-  });
-  bankListEl.querySelectorAll(".bank-date-input").forEach(dt => {
-    dt.addEventListener("change", onDateChange);
-  });
+  // Attacher les événements uniquement si admin
+  if (isAdmin) {
+    bankListEl.querySelectorAll(".bank-checkbox").forEach(cb => {
+      cb.addEventListener("change", onCheckboxChange);
+    });
+    bankListEl.querySelectorAll(".bank-date-input").forEach(dt => {
+      dt.addEventListener("change", onDateChange);
+    });
+  } else {
+    // En lecture seule, on désactive les inputs date (déjà fait par CSS, mais on assure)
+    bankListEl.querySelectorAll(".bank-date-input").forEach(dt => {
+      dt.disabled = true;
+    });
+  }
   // Le bouton de suppression a été retiré
 }
 
 // ----- GESTION DE LA SÉCURITÉ (modale) -----
 function askSecurityCode(message) {
   return new Promise((resolve) => {
+    // Si non admin, on refuse directement
+    if (!isAdmin) {
+      resolve(null);
+      return;
+    }
     securityModalMsg.textContent = message || "Cette action est réservée à l'administrateur. Veuillez entrer le code de sécurité.";
     securityCodeInput.value = "";
     securityModalEl.addEventListener('shown.bs.modal', function onShown() {
@@ -803,6 +872,10 @@ function askSecurityCode(message) {
 // ----- MODALE DE CONFIRMATION POUR COCHER -----
 function askConfirmation(bankName) {
   return new Promise((resolve) => {
+    if (!isAdmin) {
+      resolve(false);
+      return;
+    }
     confirmBankMessage.textContent = `La banque « ${bankName} » a-t-elle effectivement transféré les fonds ?`;
     let resolved = false;
     const yesHandler = function() {
@@ -840,39 +913,38 @@ function showThankYouOverlay() {
 
 // ----- ÉVÉNEMENTS SUR LES BANQUES (asynchrones avec Firebase) -----
 async function onCheckboxChange(e){
-  e.preventDefault(); // on garde le contrôle du checked
+  if (!isAdmin) {
+    e.preventDefault();
+    e.target.checked = false;
+    showToast("Mode lecture seule : vous ne pouvez pas modifier les statuts.");
+    return;
+  }
+  e.preventDefault();
   const monthValue = monthPicker.value || currentMonthValue();
-  // Vérifier que les options sont valides
   if(!areOptionsValid()){
     showToast("Veuillez sélectionner le statut agents et le type de paiement (et désignation si requis)");
-    // on remet la case à son état initial (non cochée)
     e.target.checked = false;
     return;
   }
 
   const bank = e.target.getAttribute("data-bank");
-  const nowChecked = e.target.checked; // true si on veut cocher, false si on veut décocher
+  const nowChecked = e.target.checked;
 
   if (!nowChecked) {
-    // Décochage : demande du code de sécurité
     const code = await askSecurityCode("⚠️ Action réservée à l'administrateur. Entrez le code de sécurité pour décochage.");
     if (code === "1984") {
-      // Procéder au décochage
       let status = statusesData[monthValue] || {};
       status[bank] = { checked: false, date: "" };
       await writeStatus(monthValue, status);
       statusesData[monthValue] = status;
       render();
     } else {
-      // Annulation : on remet la case cochée (car elle était cochée avant le clic)
       e.target.checked = true;
       showToast("Code incorrect ou action annulée. Décochage non effectué.");
     }
   } else {
-    // Coche : demander confirmation à l'utilisateur
     const confirmation = await askConfirmation(bank);
     if (confirmation) {
-      // Oui : mettre à jour, afficher remerciement, cocher
       let status = statusesData[monthValue] || {};
       const existingDate = (status[bank] && status[bank].date) || todayISO();
       status[bank] = { checked: true, date: existingDate };
@@ -881,14 +953,17 @@ async function onCheckboxChange(e){
       showThankYouOverlay();
       render();
     } else {
-      // Non : ne rien faire, la case reste décochée
       e.target.checked = false;
-      // Pas de toast, juste annulation silencieuse
     }
   }
 }
 
 function onDateChange(e){
+  if (!isAdmin) {
+    e.target.value = statusesData[monthPicker.value]?.[e.target.getAttribute("data-bank")]?.date || "";
+    showToast("Mode lecture seule : modification non autorisée.");
+    return;
+  }
   const bank = e.target.getAttribute("data-bank");
   const monthValue = monthPicker.value || currentMonthValue();
   let status = statusesData[monthValue] || {};
@@ -896,7 +971,6 @@ function onDateChange(e){
   status[bank].date = e.target.value;
   writeStatus(monthValue, status);
   statusesData[monthValue] = status;
-  // Pas besoin de rerender, l'input a déjà la valeur
 }
 
 // ----- GESTION DES OPTIONS (statut, type, désignation) avec sécurité -----
@@ -911,6 +985,12 @@ function areOptionsValid(){
 }
 
 async function handleOptionChange(e) {
+  if (!isAdmin) {
+    const element = e.target;
+    element.value = element.dataset.prevValue || '';
+    showToast("Mode lecture seule : modification non autorisée.");
+    return;
+  }
   const element = e.target;
   if (element.disabled) return;
   const previousValue = element.dataset.prevValue || '';
@@ -920,7 +1000,6 @@ async function handleOptionChange(e) {
   const code = await askSecurityCode("⚠️ Modification des paramètres. Cette action est réservée à l'administrateur. Entrez le code de sécurité.");
   if (code === "1984") {
     element.dataset.prevValue = newValue;
-    // Sauvegarder les options
     const monthValue = monthPicker.value || currentMonthValue();
     let options = optionsData[monthValue] || {};
     options.statutAgents = statutAgents.value;
@@ -928,14 +1007,12 @@ async function handleOptionChange(e) {
     options.designation = designationInput.value.trim();
     await writeOptions(monthValue, options);
     optionsData[monthValue] = options;
-    // Gérer affichage désignation
     if (element.id === 'typePaiement') {
       const show = (newValue === "PRIME" || newValue === "AUTRE");
       designationContainer.style.display = show ? "block" : "none";
       if (!show) {
         designationInput.value = "";
         designationInput.dataset.prevValue = "";
-        // Mettre à jour les options après avoir vidé
         options.designation = "";
         await writeOptions(monthValue, options);
         optionsData[monthValue] = options;
@@ -948,21 +1025,21 @@ async function handleOptionChange(e) {
   }
 }
 
-// ----- AUTRES ÉVÉNEMENTS (reset, envoi) -----
-// La fonction d'ajout de banque a été supprimée
-
+// ----- AUTRES ÉVÉNEMENTS -----
 monthPicker.addEventListener("change", function(){
-  render(); // les données sont déjà dans les variables globales
+  render();
 });
 
 resetBtn.addEventListener("click", async function(){
+  if (!isAdmin) {
+    showToast("Mode lecture seule : action non autorisée.");
+    return;
+  }
   const monthValue = monthPicker.value || currentMonthValue();
   const code = await askSecurityCode("⚠️ Réinitialisation de toutes les coches du mois. Cette action est réservée à l'administrateur. Entrez le code de sécurité.");
   if (code === "1984") {
     if (!confirm(`Voulez-vous vraiment effacer toutes les coches pour le mois ${monthValue} ?`)) return;
-    // Supprimer le statut du mois
     await remove(ref(database, `statuses/${monthValue}`));
-    // Mettre à jour local
     delete statusesData[monthValue];
     showToast("Historique des coches réinitialisé pour ce mois");
     render();
@@ -1036,7 +1113,12 @@ sendBtn.addEventListener("click", () => {
 
 // ----- INITIALISATION -----
 async function init() {
-  // Lire les données initiales une fois pour alimenter les variables
+  // Récupération du paramètre mode dans l'URL
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
+  isAdmin = (mode === 'admin');
+
+  // Lecture initiale des données
   banksData = await readBanks();
   const statusSnap = await get(ref(database, 'statuses'));
   statusesData = statusSnap.exists() ? statusSnap.val() : {};
@@ -1045,14 +1127,13 @@ async function init() {
 
   initialLoadDone = true;
 
-  // Mettre en place les listeners
   setupListeners();
-
-  // Mettre en place la présence (utilisateurs en ligne)
   setupPresence();
 
-  // Initialiser le monthPicker
   monthPicker.value = currentMonthValue();
+
+  // Appliquer le mode (lecture seule / admin) avant le premier rendu
+  applyMode();
 
   // Charger les options du mois courant
   const initMonth = monthPicker.value;
@@ -1066,23 +1147,40 @@ async function init() {
   typePaiement.dataset.prevValue = typePaiement.value;
   designationInput.dataset.prevValue = designationInput.value;
 
-  // Ajouter les écouteurs pour les options (sécurité)
-  statutAgents.addEventListener('focus', function() { this.dataset.prevValue = this.value; });
-  typePaiement.addEventListener('focus', function() { this.dataset.prevValue = this.value; });
-  designationInput.addEventListener('focus', function() { this.dataset.prevValue = this.value; });
-  statutAgents.addEventListener('change', handleOptionChange);
-  typePaiement.addEventListener('change', handleOptionChange);
-  designationInput.addEventListener('change', handleOptionChange);
-  designationInput.addEventListener('blur', function(e) {
-    if (this.dataset.prevValue !== this.value) {
-      handleOptionChange(e);
-    }
-  });
+  // Ajouter les écouteurs pour les options (sécurité) seulement si admin
+  if (isAdmin) {
+    statutAgents.addEventListener('focus', function() { this.dataset.prevValue = this.value; });
+    typePaiement.addEventListener('focus', function() { this.dataset.prevValue = this.value; });
+    designationInput.addEventListener('focus', function() { this.dataset.prevValue = this.value; });
+    statutAgents.addEventListener('change', handleOptionChange);
+    typePaiement.addEventListener('change', handleOptionChange);
+    designationInput.addEventListener('change', handleOptionChange);
+    designationInput.addEventListener('blur', function(e) {
+      if (this.dataset.prevValue !== this.value) {
+        handleOptionChange(e);
+      }
+    });
+  } else {
+    // En lecture seule, on désactive les champs (déjà fait par applyMode)
+    // mais on empêche toute modification
+    statutAgents.addEventListener('change', function(e) {
+      e.target.value = e.target.dataset.prevValue || '';
+      showToast("Mode lecture seule : modification non autorisée.");
+    });
+    typePaiement.addEventListener('change', function(e) {
+      e.target.value = e.target.dataset.prevValue || '';
+      showToast("Mode lecture seule : modification non autorisée.");
+    });
+    designationInput.addEventListener('change', function(e) {
+      e.target.value = e.target.dataset.prevValue || '';
+      showToast("Mode lecture seule : modification non autorisée.");
+    });
+  }
 
   // Premier rendu
   render();
 
-  // Gestion PWA - Enregistrement du Service Worker avec chemin relatif (fonctionne en local et en production)
+  // Gestion PWA
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js')
       .then(() => console.log('SW enregistré avec succès'))
@@ -1115,9 +1213,7 @@ async function init() {
   });
 }
 
-// Lancer l'initialisation
 init();
-
 </script>
 </body>
 </html>

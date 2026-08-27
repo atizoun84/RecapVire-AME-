@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#075E54">
+  <title>RecapVire — Connexion</title>
+  <link rel="manifest" href="manifest.json">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: var(--wa-bg, #ECE5DD);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 20px;
+    }
+    .login-card {
+      background: #FFFFFF;
+      border-radius: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+      padding: 40px 30px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    .login-card .brand-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: #25D366;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      color: #fff;
+      margin: 0 auto 16px auto;
+    }
+    .login-card h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #075E54;
+      margin-bottom: 6px;
+    }
+    .login-card .sub {
+      color: #667781;
+      font-size: 0.95rem;
+      margin-bottom: 30px;
+    }
+    .login-card .btn-group-vertical {
+      gap: 14px;
+      width: 100%;
+    }
+    .login-card .btn {
+      padding: 14px;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      transition: transform 0.15s ease;
+    }
+    .login-card .btn:active {
+      transform: scale(0.97);
+    }
+    .btn-consulter {
+      background: #128C7E;
+      border-color: #128C7E;
+      color: #fff;
+    }
+    .btn-consulter:hover {
+      background: #0e7368;
+      border-color: #0e7368;
+      color: #fff;
+    }
+    .btn-administrer {
+      background: #075E54;
+      border-color: #075E54;
+      color: #fff;
+    }
+    .btn-administrer:hover {
+      background: #054b42;
+      border-color: #054b42;
+      color: #fff;
+    }
+    .footer-credit {
+      margin-top: 24px;
+      font-size: 0.75rem;
+      color: #8696a0;
+      border-top: 1px solid #e9edef;
+      padding-top: 16px;
+    }
+    .footer-credit strong {
+      color: #075E54;
+    }
+    .footer-credit i {
+      margin: 0 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="brand-icon"><i class="bi bi-bank2"></i></div>
+  <h1>RecapVire</h1>
+  <p class="sub">Suivi des virements de salaires — AME</p>
+
+  <div class="btn-group-vertical">
+    <a href="index.html?mode=view" class="btn btn-consulter">
+      <i class="bi bi-eye me-2"></i> Consulter
+    </a>
+    <a href="index.html?mode=admin" class="btn btn-administrer">
+      <i class="bi bi-shield-lock me-2"></i> Administrer
+    </a>
+  </div>
+
+  <div class="footer-credit">
+    Conçu par <strong>Atizoun Plateny AMOUSSOU</strong><br>
+    <i class="bi bi-envelope"></i> atizoun@gmail.com &nbsp;•&nbsp; <i class="bi bi-telephone"></i> 01 97 74 40 35
+  </div>
+</div>
+
+</body>
+</html>
