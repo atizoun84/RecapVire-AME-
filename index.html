@@ -432,6 +432,8 @@
           <span id="connectionLabel">Connexion...</span>
           <span class="online-count"><i class="bi bi-people"></i> <span id="onlineCount">0</span> en ligne</span>
         </div>
+        <!-- Indicateur de rôle -->
+        <div id="roleDisplay" style="font-size:0.75rem; font-weight:600; margin-top:4px; color:#d6f3ec;"></div>
       </div>
     </div>
   </div>
@@ -585,6 +587,7 @@ const installBtn = document.getElementById("installBtn");
 const connectionStatus = document.getElementById("connectionStatus");
 const connectionLabel = document.getElementById("connectionLabel");
 const onlineCountSpan = document.getElementById("onlineCount");
+const roleDisplay = document.getElementById("roleDisplay");
 
 // Éléments de la modale de sécurité
 const securityModalEl = document.getElementById("securityModal");
@@ -757,6 +760,8 @@ function applyMode() {
     designationInput.disabled = false;
     resetBtn.style.display = '';
   }
+  // Mise à jour de l'affichage du rôle
+  roleDisplay.textContent = isAdmin ? '🔐 Mode : Administrateur' : '👁️ Mode : Consultation';
 }
 
 // ----- RENDU PRINCIPAL -----
@@ -804,7 +809,9 @@ function render(){
 
     // En mode admin, on affiche la case à cocher ; en lecture seule, on la masque via CSS (readonly-mode .bank-checkbox)
     // On ajoute la classe 'bank-checkbox' pour le ciblage CSS
-    const checkboxHtml = `<input class="form-check-input bank-checkbox" type="checkbox" data-bank="${escapeAttr(bank)}" ${entry.checked ? "checked" : ""}>`;
+    // Ajout de disabled et pointer-events:none en mode non-admin pour empêcher toute interaction
+    const disabledAttr = !isAdmin ? 'disabled style="pointer-events:none;"' : '';
+    const checkboxHtml = `<input class="form-check-input bank-checkbox" type="checkbox" data-bank="${escapeAttr(bank)}" ${entry.checked ? "checked" : ""} ${disabledAttr}>`;
 
     card.innerHTML = `
       ${checkboxHtml}
@@ -1116,6 +1123,13 @@ async function init() {
   // Récupération du paramètre mode dans l'URL
   const params = new URLSearchParams(window.location.search);
   const mode = params.get('mode');
+
+  // Rediriger si le mode est invalide ou absent
+  if (mode !== 'view' && mode !== 'admin') {
+    window.location.replace('login.html');
+    return;
+  }
+
   isAdmin = (mode === 'admin');
 
   // Lecture initiale des données

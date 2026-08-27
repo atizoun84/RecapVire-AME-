@@ -113,7 +113,7 @@
     <a href="index.html?mode=view" class="btn btn-consulter">
       <i class="bi bi-eye me-2"></i> Consulter
     </a>
-    <a href="index.html?mode=admin" class="btn btn-administrer">
+    <a href="#" class="btn btn-administrer" id="adminLoginBtn">
       <i class="bi bi-shield-lock me-2"></i> Administrer
     </a>
   </div>
@@ -123,6 +123,81 @@
     <i class="bi bi-envelope"></i> atizoun@gmail.com &nbsp;•&nbsp; <i class="bi bi-telephone"></i> 01 97 74 40 35
   </div>
 </div>
+
+<!-- Modal pour le mot de passe administrateur -->
+<div class="modal fade" id="adminPasswordModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">🔒 Accès administrateur</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        <p>Veuillez saisir le code de sécurité pour accéder au mode administration.</p>
+        <input type="password" id="adminPasswordInput" class="form-control" placeholder="Code de sécurité" autocomplete="off">
+        <div id="adminPasswordError" class="text-danger mt-2" style="display:none;">Code incorrect, veuillez réessayer.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary" id="adminPasswordConfirm">Valider</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS pour la modale -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  (function() {
+    const adminBtn = document.getElementById('adminLoginBtn');
+    const modalEl = document.getElementById('adminPasswordModal');
+    const passwordInput = document.getElementById('adminPasswordInput');
+    const confirmBtn = document.getElementById('adminPasswordConfirm');
+    const errorDiv = document.getElementById('adminPasswordError');
+
+    // Ouvrir la modale au clic sur Administrer
+    adminBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      // Réinitialiser l'état du modal
+      passwordInput.value = '';
+      errorDiv.style.display = 'none';
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+      // Focus sur le champ après l'ouverture
+      modalEl.addEventListener('shown.bs.modal', function onShown() {
+        passwordInput.focus();
+        modalEl.removeEventListener('shown.bs.modal', onShown);
+      });
+    });
+
+    // Valider le mot de passe
+    function validatePassword() {
+      const password = passwordInput.value;
+      if (password === '1984') {
+        window.location.href = 'index.html?mode=admin';
+      } else {
+        errorDiv.style.display = 'block';
+        passwordInput.value = '';
+        passwordInput.focus();
+      }
+    }
+
+    confirmBtn.addEventListener('click', validatePassword);
+
+    // Valider avec la touche Entrée
+    passwordInput.addEventListener('keyup', function(e) {
+      if (e.key === 'Enter') {
+        validatePassword();
+      }
+    });
+
+    // Cacher l'erreur quand l'utilisateur modifie le champ
+    passwordInput.addEventListener('input', function() {
+      errorDiv.style.display = 'none';
+    });
+  })();
+</script>
 
 </body>
 </html>
